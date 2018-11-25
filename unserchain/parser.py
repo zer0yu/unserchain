@@ -24,5 +24,5 @@ def parser(filename):
         code = f.read()
 
     reload(phply.phplex)
-    logger.debug('Parse file: %s' % filename)
+    logger.info('Parse file: %s' % filename)
     return export(make_parser().parse(code, lexer=phply.phplex.lexer, tracking=True))

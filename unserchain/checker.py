@@ -19,18 +19,8 @@ def context(f):
         if ret and 'ctx' in kwargs:
             # print 'RET', ret
             if 'name' in args[0]:
-                if isinstance(args[0]['name'], str):
-                    if args[0]['name'] in kwargs['ctx']['chains']:
-                         kwargs['ctx']['chains'][args[0]['name']].append(ret)
-                else:
-                    _, new_node_info = args[0]['name']
-                    if _ == VARIABLE:
-                        if new_node_info['name'] in kwargs['ctx']['chains']:
-                            kwargs['ctx']['chains'][new_node_info].append(ret)
-                    elif _ == OBJECTPROPERTY:
-                        _, n = new_node_info['node']
-                        if n['name'] in kwargs['ctx']['chains']:
-                            kwargs['ctx']['chains']['%s->%s' % (n['name'], new_node_info['name'])].append(ret)
+                if args[0]['name'] in kwargs['ctx']['chains']:
+                     kwargs['ctx']['chains'][args[0]['name']].append(ret)
 
         return ret
 
@@ -46,9 +36,9 @@ def check_eval(node_info, **kwargs):
 def check_block(node_info, **kwargs):
     ret_list = []
     for node_type, node in node_info['nodes']:
-        check_func = CHECKER_MAP.get(node_type)
-        if check_func:
-            ret = check_func(node, **kwargs)
+        checke_func = CHECKER_MAP.get(node_type)
+        if checke_func:
+            ret = checke_func(node, **kwargs)
             if ret:
                 ret_list.append(ret)
 
@@ -62,7 +52,7 @@ def check_function_call(node_info, **kwargs):
     :return str or None
     """
     if node_info['name'] in DANGEROUS_FUNCTIONS or node_info['name'] in USER_DEFINED_DANGEROUS_FUNCTION:
-        logger.debug('Dangerous function call detected: %s' % node_info['name'])
+        logger.warn('Dangerous function call detected: %s' % node_info['name'])
         return node_info['name']
 
     if node_info['name'] not in PARSED_FUNCTION:
@@ -110,29 +100,6 @@ def check_method_call(node_info, ctx=None):
 
 
 @context
-def check_new(node_info, **kwargs):
-    """ check new operator
-
-    ```php
-    $a = new B();
-    ```
-
-    :param node_info:
-    :param kwargs:
-    :return:
-    """
-    if isinstance(node_info['name'], str):
-        return 'new %s' % node_info['name']
-    else:
-        type_, new_node_info = node_info['name']
-        if type_ == VARIABLE:
-            return 'new %s' % new_node_info['name']
-        elif type_ == OBJECTPROPERTY:
-            _, n = new_node_info['node']
-            return 'new %s->%s' % (n['name'], new_node_info['name'])
-
-
-@context
 def check_method(node_info, ctx=None):
     """check magic method
 
@@ -153,15 +120,9 @@ def check_method(node_info, ctx=None):
             if check_func:
                 ret = check_func(i, ctx=ctx)
                 if ret:
-                    if not isinstance(ret, list):
-                        ret = [ret]
-
-                    ret_list.extend(ret)
+                    ret_list.append(ret)
                     # do something else
-                    if node_info['name'] not in ctx['evil_methods']:
-                        ctx['evil_methods'][node_info['name']] = []
-
-                    ctx['evil_methods'][node_info['name']].extend(ret)
+                    ctx['evil_methods'][node_info['name']] = ret
 
         return ret_list
 
@@ -272,7 +233,6 @@ CHECKER_MAP = {
     TERNARY_OP: check_ternary_op,
     ELSE: check_else,
     RETURN: check_return,
-    NEW: check_new,
 }
 
 

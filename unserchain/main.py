@@ -26,9 +26,6 @@ def build_chains(context):
             if isinstance(chain, list):
                 while isinstance(i, list) and len(i) == 1:
                     i = i[0]
-
-                if isinstance(i, list):
-                    i = ', '.join(i)
                 result.append(i)
             else:
                 if chain not in result:
@@ -39,23 +36,20 @@ def build_chains(context):
 
     entry_keys = [k for k in result_dict.keys() if k not in itertools.chain(*result_dict.values())]
 
-    def output_map(map_, k, index=0, ret=None):
+    def output_map(map_, k, ret=None):
         if ret is None:
             ret = []
-
         if k in map_:
             ret.append(k)
             # map_[k][0] ignore others chain
-            return output_map(map_, map_[k][index], index=0, ret=ret)
+            return output_map(map_, map_[k][0], ret)
         else:
             ret.append(k)
             return ret
 
     for k in entry_keys:
-        for i in range(len(result_dict[k])):
-            chain_list = output_map(result_dict, k, i)
-            logger.info('Class %s ' % context['class'] + ' -> '.join(chain_list))
-
+        chain_list = output_map(result_dict, k)
+        logger.info('Class %s ' % context['class'] + ' -> '.join(chain_list))
 
 def check(result):
     for type_, info in result:
@@ -76,16 +70,11 @@ def main():
     for root, _, files in os.walk(path):
         for filename in files:
             if filename.endswith('.php'):
-
                 php_file = os.path.abspath(os.path.join(root, filename))
-                try:
-                    result = parser(php_file)
-                except SyntaxError:
-                    logger.warning('Parse %s failed' % php_file)
-                    continue
-
+                result = parser(php_file)
                 result = [i for i in result if i]
 
+                register_functions(result)
                 for name, func_info in RUNTIME_FUNCTION.items():
                     check_function(func_info)
                 check(result)
